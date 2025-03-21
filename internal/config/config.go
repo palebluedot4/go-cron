@@ -1,0 +1,111 @@
+package config
+
+import (
+	"go-cron/internal/environment"
+	"log/slog"
+	"sync"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	Server  ServerConfig  `mapstructure:"server"`
+	Storage StorageConfig `mapstructure:"storage"`
+}
+
+type ServerConfig struct {
+	Port     int                     `mapstructure:"port"`
+	Env      environment.Environment `mapstructure:"env"`
+	LogLevel string                  `mapstructure:"log_level"`
+	Timeout  time.Duration           `mapstructure:"timeout"`
+}
+
+type StorageConfig struct {
+	Postgres PostgresConfig `mapstructure:"postgres"`
+	MongoDB  MongoDBConfig  `mapstructure:"mongodb"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+}
+
+type PostgresConfig struct {
+	Enabled         bool          `mapstructure:"enabled"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	DBName          string        `mapstructure:"dbname"`
+	SSLMode         string        `mapstructure:"sslmode"`
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+}
+
+type MongoDBConfig struct {
+	Enabled     bool          `mapstructure:"enabled"`
+	URI         string        `mapstructure:"uri"`
+	Database    string        `mapstructure:"database"`
+	MaxPoolSize int           `mapstructure:"max_pool_size"`
+	Timeout     time.Duration `mapstructure:"timeout"`
+}
+
+type RedisConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	Host         string `mapstructure:"host"`
+	Port         int    `mapstructure:"port"`
+	Password     string `mapstructure:"password"`
+	DB           int    `mapstructure:"db"`
+	MaxRetries   int    `mapstructure:"max_retries"`
+	PoolSize     int    `mapstructure:"pool_size"`
+	MinIdleConns int    `mapstructure:"min_idle_conns"`
+}
+
+var (
+	globalConfig *Config
+	initOnce     sync.Once
+	loadError    error
+)
+
+func Init() error {
+	initOnce.Do(func() {
+		globalConfig, loadError = Load()
+	})
+	return loadError
+}
+
+func Instance() (*Config, error) {
+	if globalConfig == nil {
+		if err := Init(); err != nil {
+			return nil, err
+		}
+	}
+	return globalConfig, nil
+}
+
+func Load() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("internal/config")
+	viper.AddConfigPath(".")
+
+	viper.AutomaticEnv()
+
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, err
+	}
+
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		newConfig := &Config{}
+		if err := viper.Unmarshal(newConfig); err == nil {
+			globalConfig = newConfig
+			slog.Info("config file changed and reloaded")
+		} else {
+			slog.Error("failed to reload config", "error", err, "file", e.Name)
+		}
+	})
+
+	config := &Config{}
+	err := viper.Unmarshal(config)
+	return config, err
+}
