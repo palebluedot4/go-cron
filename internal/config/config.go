@@ -61,25 +61,25 @@ type RedisConfig struct {
 }
 
 var (
-	globalConfig *Config
-	initOnce     sync.Once
-	loadError    error
+	instance *Config
+	once     sync.Once
+	cfgError error
 )
 
 func Init() error {
-	initOnce.Do(func() {
-		globalConfig, loadError = Load()
+	once.Do(func() {
+		instance, cfgError = Load()
 	})
-	return loadError
+	return cfgError
 }
 
 func Instance() (*Config, error) {
-	if globalConfig == nil {
+	if instance == nil {
 		if err := Init(); err != nil {
 			return nil, err
 		}
 	}
-	return globalConfig, nil
+	return instance, nil
 }
 
 func Load() (*Config, error) {
@@ -98,7 +98,7 @@ func Load() (*Config, error) {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		newConfig := &Config{}
 		if err := viper.Unmarshal(newConfig); err == nil {
-			globalConfig = newConfig
+			instance = newConfig
 			slog.Info("config file changed and reloaded")
 		} else {
 			slog.Error("failed to reload config", "error", err, "file", e.Name)
