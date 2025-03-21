@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
+	"go-cron/internal/config"
+	"go-cron/internal/environment"
 	"go-cron/pkg/utils/timeutil"
 
 	"github.com/labstack/echo/v4"
@@ -16,7 +19,29 @@ import (
 )
 
 func main() {
+	if err := config.Init(); err != nil {
+		slog.Error("failed to initialize config", "error", err)
+		os.Exit(1)
+	}
+
+	cfg, err := config.Instance()
+	if err != nil {
+		slog.Error("failed to get config", "error", err)
+		os.Exit(1)
+	}
+
+	env := cfg.Server.Env
+	if !environment.IsValid(env) {
+		slog.Error("invalid environment configuration", "environment", env)
+		os.Exit(1)
+	}
+
+	slog.Info("starting application", "environment", env, "port", cfg.Server.Port)
+
 	e := echo.New()
+	if environment.IsDevelopment(env) {
+		e.Debug = true
+	}
 
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Skipper: func(c echo.Context) bool {
@@ -33,20 +58,31 @@ func main() {
 	})
 
 	go func() {
-		if err := e.Start(":8080"); err != nil {
-			e.Logger.Fatal(err)
+		err := e.Start(":" + strconv.Itoa(cfg.Server.Port))
+		if err != nil && err != http.ErrServerClosed {
+			slog.Error("server failed unexpectedly", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	quiz := make(chan os.Signal, 1)
-	signal.Notify(quiz, syscall.SIGINT, syscall.SIGTERM)
-	<-quiz
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
 
-	slog.Warn("Shutting down the server...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	slog.Warn("shutting down the server")
+
+	shutdownTimeout := cfg.Server.Timeout
+	if shutdownTimeout == 0 {
+		shutdownTimeout = 10 * time.Second
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
+
 	if err := e.Shutdown(ctx); err != nil {
-		slog.Error("Failed to shutdown server", "error", err)
+		slog.Error("failed to shutdown server", "error", err)
 		os.Exit(1)
 	}
+
+	slog.Info("server gracefully stopped")
 }
