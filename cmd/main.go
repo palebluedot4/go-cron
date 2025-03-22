@@ -39,9 +39,7 @@ func main() {
 	slog.Info("starting application", "environment", env, "port", cfg.Server.Port)
 
 	e := echo.New()
-	if environment.IsDevelopment(env) {
-		e.Debug = true
-	}
+	updateServerSettings(cfg, e)
 
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Skipper: func(c echo.Context) bool {
@@ -53,7 +51,7 @@ func main() {
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":    "ok",
-			"timestamp": time.Now().In(timeutil.TaipeiLocation).Format(time.RFC3339Nano),
+			"timestamp": timeutil.Now().Format(time.RFC3339Nano),
 		})
 	})
 
@@ -84,5 +82,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	slog.Info("server gracefully stopped")
+	slog.Error("failed to shutdown server", "error", err)
+}
+
+func updateServerSettings(cfg *config.Config, e *echo.Echo) {
+	if environment.IsDevelopment(cfg.Server.Env) {
+		e.Debug = true
+	} else {
+		e.Debug = false
+	}
+}
+
+func shutdownTimeout(cfg *config.Config) time.Duration {
+	if cfg.Server.Timeout == 0 {
+		return 10 * time.Second
+	}
+	return cfg.Server.Timeout
 }
