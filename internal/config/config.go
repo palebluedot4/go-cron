@@ -1,10 +1,10 @@
 package config
 
 import (
-	"go-cron/internal/environment"
-	"log/slog"
 	"sync"
 	"time"
+
+	"go-cron/internal/environment"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
@@ -16,10 +16,16 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port     int                     `mapstructure:"port"`
-	Env      environment.Environment `mapstructure:"env"`
-	LogLevel string                  `mapstructure:"log_level"`
-	Timeout  time.Duration           `mapstructure:"timeout"`
+	Port      int                     `mapstructure:"port"`
+	Env       environment.Environment `mapstructure:"env"`
+	LogLevel  string                  `mapstructure:"log_level"`
+	LogOutput LogOutputConfig         `mapstructure:"log_output"`
+	Timeout   time.Duration           `mapstructure:"timeout"`
+}
+
+type LogOutputConfig struct {
+	Console bool `mapstructure:"console"`
+	File    bool `mapstructure:"file"`
 }
 
 type StorageConfig struct {
@@ -61,9 +67,10 @@ type RedisConfig struct {
 }
 
 var (
-	instance *Config
-	once     sync.Once
-	cfgError error
+	instance   *Config
+	once       sync.Once
+	cfgError   error
+	instanceMu sync.RWMutex
 )
 
 func Init() error {
@@ -74,11 +81,19 @@ func Init() error {
 }
 
 func Instance() (*Config, error) {
-	if instance == nil {
-		if err := Init(); err != nil {
-			return nil, err
-		}
+	instanceMu.RLock()
+	if instance != nil {
+		defer instanceMu.RUnlock()
+		return instance, nil
 	}
+	instanceMu.RUnlock()
+
+	if err := Init(); err != nil {
+		return nil, err
+	}
+
+	instanceMu.RLock()
+	defer instanceMu.RUnlock()
 	return instance, nil
 }
 
@@ -98,14 +113,32 @@ func Load() (*Config, error) {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		newConfig := &Config{}
 		if err := viper.Unmarshal(newConfig); err == nil {
+			instanceMu.Lock()
 			instance = newConfig
-			slog.Info("config file changed and reloaded")
-		} else {
-			slog.Error("failed to reload config", "error", err, "file", e.Name)
+			instanceMu.Unlock()
+
+			callbackMu.RLock()
+			for _, callback := range callbacks {
+				callback(instance, e.Name)
+			}
+			callbackMu.RUnlock()
 		}
 	})
 
 	config := &Config{}
 	err := viper.Unmarshal(config)
 	return config, err
+}
+
+type ChangeCallback func(*Config, string)
+
+var (
+	callbacks  []ChangeCallback
+	callbackMu sync.RWMutex
+)
+
+func RegisterChangeCallback(callback ChangeCallback) {
+	callbackMu.Lock()
+	defer callbackMu.Unlock()
+	callbacks = append(callbacks, callback)
 }

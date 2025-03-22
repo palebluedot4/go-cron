@@ -2,6 +2,9 @@ server:
   port: 8080
   env: development
   log_level: info
+  log_output:
+    console: true
+    file: false
   timeout: 30s
 
 storage:
