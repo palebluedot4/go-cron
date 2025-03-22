@@ -53,7 +53,7 @@ func main() {
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
 			"status":    "ok",
-			"timestamp": time.Now().In(timeutil.TaipeiLocation).Format(time.RFC3339Nano),
+			"timestamp": timeutil.Now().Format(time.RFC3339Nano),
 		})
 	})
 
