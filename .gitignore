@@ -1,2 +1,4 @@
 internal/config/config.yaml
 *.log
+main
+go-cron
