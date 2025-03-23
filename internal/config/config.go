@@ -142,3 +142,7 @@ func RegisterChangeCallback(callback ChangeCallback) {
 	defer callbackMu.Unlock()
 	callbacks = append(callbacks, callback)
 }
+
+func IsValid(cfg *Config, err error) bool {
+	return err == nil && cfg != nil
+}
