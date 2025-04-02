@@ -33,3 +33,17 @@ func ServerIdle(cfg *config.Config) time.Duration {
 	}
 	return cfg.Server.IdleTimeout
 }
+
+func DatabaseConnect(cfg *config.Config) time.Duration {
+	if cfg.Storage.ConnectTimeout == 0 {
+		return 15 * time.Second
+	}
+	return cfg.Storage.ConnectTimeout
+}
+
+func DatabaseShutdown(cfg *config.Config) time.Duration {
+	if cfg.Storage.ShutdownTimeout == 0 {
+		return 30 * time.Second
+	}
+	return cfg.Storage.ShutdownTimeout
+}
