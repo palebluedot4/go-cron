@@ -16,11 +16,11 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port      int                     `mapstructure:"port"`
-	Env       environment.Environment `mapstructure:"env"`
-	LogLevel  string                  `mapstructure:"log_level"`
-	LogOutput LogOutputConfig         `mapstructure:"log_output"`
-	Timeout   time.Duration           `mapstructure:"timeout"`
+	Port            int                     `mapstructure:"port"`
+	Env             environment.Environment `mapstructure:"env"`
+	LogLevel        string                  `mapstructure:"log_level"`
+	LogOutput       LogOutputConfig         `mapstructure:"log_output"`
+	ShutdownTimeout time.Duration           `mapstructure:"shutdown_timeout"`
 }
 
 type LogOutputConfig struct {

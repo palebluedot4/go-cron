@@ -51,20 +51,6 @@ func SetLogLevel(level string) {
 	setLogLevel(instance.Logger, level)
 }
 
-func (l *Logger) AdjustForProduction() {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	cfg, err := config.Instance()
-	if !config.IsValid(cfg, err) {
-		return
-	}
-
-	if environment.IsProduction(cfg.Server.Env) {
-		l.SetLevel(logrus.WarnLevel)
-	}
-}
-
 func (l *Logger) WithField(key string, value any) *logrus.Entry {
 	return l.Logger.WithField(key, value)
 }
@@ -212,5 +198,6 @@ func setupFileOutput(l *Logger, writers *[]io.Writer) error {
 
 	l.logFile = file
 	*writers = append(*writers, file)
+
 	return nil
 }
