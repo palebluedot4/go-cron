@@ -54,12 +54,16 @@ func main() {
 		updateLogSettings(cfg, log)
 	})
 
+	e.Pre(middleware.RemoveTrailingSlash())
+
+	e.Use(middleware.RequestID())
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Skipper: func(c echo.Context) bool {
 			return c.Path() == "/health"
 		},
 	}))
 	e.Use(middleware.Recover())
+	e.Use(middleware.Secure())
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
@@ -68,11 +72,19 @@ func main() {
 		})
 	})
 
+	s := &http.Server{
+		Addr:         ":" + strconv.Itoa(cfg.Server.Port),
+		ReadTimeout:  timeout.ServerRead(cfg),
+		WriteTimeout: timeout.ServerWrite(cfg),
+		IdleTimeout:  timeout.ServerIdle(cfg),
+	}
+	e.Server = s
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		err := e.Start(":" + strconv.Itoa(cfg.Server.Port))
+		err := e.StartServer(s)
 		if err != nil && err != http.ErrServerClosed {
 			log.WithError(err).Error("Server failed unexpectedly")
 			quit <- syscall.SIGTERM

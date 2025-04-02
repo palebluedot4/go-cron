@@ -18,9 +18,12 @@ type Config struct {
 type ServerConfig struct {
 	Port            int                     `mapstructure:"port"`
 	Env             environment.Environment `mapstructure:"env"`
+	ShutdownTimeout time.Duration           `mapstructure:"shutdown_timeout"`
+	ReadTimeout     time.Duration           `mapstructure:"read_timeout"`
+	WriteTimeout    time.Duration           `mapstructure:"write_timeout"`
+	IdleTimeout     time.Duration           `mapstructure:"idle_timeout"`
 	LogLevel        string                  `mapstructure:"log_level"`
 	LogOutput       LogOutputConfig         `mapstructure:"log_output"`
-	ShutdownTimeout time.Duration           `mapstructure:"shutdown_timeout"`
 }
 
 type LogOutputConfig struct {
