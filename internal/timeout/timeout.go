@@ -12,3 +12,24 @@ func ServerShutdown(cfg *config.Config) time.Duration {
 	}
 	return cfg.Server.ShutdownTimeout
 }
+
+func ServerRead(cfg *config.Config) time.Duration {
+	if cfg.Server.ReadTimeout == 0 {
+		return 15 * time.Second
+	}
+	return cfg.Server.ReadTimeout
+}
+
+func ServerWrite(cfg *config.Config) time.Duration {
+	if cfg.Server.WriteTimeout == 0 {
+		return 30 * time.Second
+	}
+	return cfg.Server.WriteTimeout
+}
+
+func ServerIdle(cfg *config.Config) time.Duration {
+	if cfg.Server.IdleTimeout == 0 {
+		return 120 * time.Second
+	}
+	return cfg.Server.IdleTimeout
+}
