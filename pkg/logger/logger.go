@@ -51,6 +51,12 @@ func SetLogLevel(level string) {
 	setLogLevel(instance.Logger, level)
 }
 
+func UpdateFromConfig(cfg *config.Config) {
+	if cfg != nil && cfg.Server.LogLevel != "" {
+		SetLogLevel(cfg.Server.LogLevel)
+	}
+}
+
 func (l *Logger) WithField(key string, value any) *logrus.Entry {
 	return l.Logger.WithField(key, value)
 }

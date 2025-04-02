@@ -51,7 +51,7 @@ func main() {
 
 	config.RegisterChangeCallback(func(cfg *config.Config, fileName string) {
 		log.WithField("file", fileName).Info("Config file changed")
-		updateLogSettings(cfg, log)
+		logger.UpdateFromConfig(cfg)
 	})
 
 	e.GET("/health", func(c echo.Context) error {
@@ -98,10 +98,4 @@ func main() {
 	}
 
 	log.Info("Server gracefully stopped")
-}
-
-func updateLogSettings(cfg *config.Config, log *logger.Logger) {
-	if cfg.Server.LogLevel != "" {
-		logger.SetLogLevel(cfg.Server.LogLevel)
-	}
 }
