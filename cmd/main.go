@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"go-cron/internal/config"
+	"go-cron/internal/database"
 	"go-cron/internal/environment"
 	"go-cron/internal/server"
 	"go-cron/internal/timeout"
@@ -44,6 +45,29 @@ func main() {
 		"environment": env,
 		"port":        cfg.Server.Port,
 	}).Info("Starting application")
+
+	dbManager := database.NewManager(cfg)
+	dbInitCtx, dbInitCancel := context.WithTimeout(rootCtx, timeout.DatabaseConnect(cfg))
+	defer dbInitCancel()
+	if err := dbManager.Init(dbInitCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.WithField("timeout", timeout.DatabaseConnect(cfg)).Fatal("Database initialization timed out")
+		}
+		log.WithError(err).Fatal("Failed to initialize database")
+	}
+
+	defer func() {
+		dbCloseCtx, dbCloseCancel := context.WithTimeout(context.Background(), timeout.DatabaseShutdown(cfg))
+		defer dbCloseCancel()
+
+		if err := dbManager.Close(dbCloseCtx); err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.WithField("timeout", timeout.DatabaseShutdown(cfg)).Error("Database closing timed out")
+			} else {
+				log.WithError(err).Error("Failed to close database connections")
+			}
+		}
+	}()
 
 	e := echo.New()
 	server.Configure(e, cfg)
