@@ -6,18 +6,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
 	"go-cron/internal/config"
 	"go-cron/internal/environment"
+	"go-cron/internal/server"
 	"go-cron/internal/timeout"
 	"go-cron/pkg/logger"
 	"go-cron/pkg/utils/timeutil"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -47,23 +46,13 @@ func main() {
 	}).Info("Starting application")
 
 	e := echo.New()
-	updateServerSettings(cfg, e)
+	server.Configure(e, cfg)
+	server.SetupMiddleware(e, cfg)
 
 	config.RegisterChangeCallback(func(cfg *config.Config, fileName string) {
 		log.WithField("file", fileName).Info("Config file changed")
 		updateLogSettings(cfg, log)
 	})
-
-	e.Pre(middleware.RemoveTrailingSlash())
-
-	e.Use(middleware.RequestID())
-	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
-		Skipper: func(c echo.Context) bool {
-			return c.Path() == "/health"
-		},
-	}))
-	e.Use(middleware.Recover())
-	e.Use(middleware.Secure())
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
@@ -73,7 +62,7 @@ func main() {
 	})
 
 	s := &http.Server{
-		Addr:         ":" + strconv.Itoa(cfg.Server.Port),
+		Addr:         server.Address(cfg),
 		ReadTimeout:  timeout.ServerRead(cfg),
 		WriteTimeout: timeout.ServerWrite(cfg),
 		IdleTimeout:  timeout.ServerIdle(cfg),
@@ -114,13 +103,5 @@ func main() {
 func updateLogSettings(cfg *config.Config, log *logger.Logger) {
 	if cfg.Server.LogLevel != "" {
 		logger.SetLogLevel(cfg.Server.LogLevel)
-	}
-}
-
-func updateServerSettings(cfg *config.Config, e *echo.Echo) {
-	if environment.IsDevelopment(cfg.Server.Env) {
-		e.Debug = true
-	} else {
-		e.Debug = false
 	}
 }
