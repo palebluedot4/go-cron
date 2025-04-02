@@ -20,7 +20,7 @@ type Database interface {
 type Manager struct {
 	cfg      *config.Config
 	postgres *postgres.Postgres
-	mongo    *mongo.MongoDB
+	mongodb  *mongo.MongoDB
 	redis    *redis.Redis
 	mu       sync.RWMutex
 }
@@ -57,7 +57,7 @@ func (m *Manager) Init(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mdb, err := m.Mongo(ctx)
+			mdb, err := m.MongoDB(ctx)
 			if err != nil {
 				log.WithError(err).Warn("Failed to initialize MongoDB connection")
 				errCh <- fmt.Errorf("MongoDB connection failed: %w", err)
@@ -123,15 +123,15 @@ func (m *Manager) Postgres(ctx context.Context) (*postgres.Postgres, error) {
 	return pg, nil
 }
 
-func (m *Manager) Mongo(ctx context.Context) (*mongo.MongoDB, error) {
+func (m *Manager) MongoDB(ctx context.Context) (*mongo.MongoDB, error) {
 	if !m.cfg.Storage.MongoDB.Enabled {
 		return nil, nil
 	}
 
 	m.mu.RLock()
-	if m.mongo != nil {
+	if m.mongodb != nil {
 		defer m.mu.RUnlock()
-		return m.mongo, nil
+		return m.mongodb, nil
 	}
 	m.mu.RUnlock()
 
@@ -143,7 +143,7 @@ func (m *Manager) Mongo(ctx context.Context) (*mongo.MongoDB, error) {
 		return nil, fmt.Errorf("failed to initialize mongo: %w", err)
 	}
 
-	m.mongo = mdb
+	m.mongodb = mdb
 	return mdb, nil
 }
 
@@ -187,14 +187,14 @@ func (m *Manager) Close(ctx context.Context) error {
 		m.postgres = nil
 	}
 
-	if m.mongo != nil {
-		if err := m.mongo.Close(ctx); err != nil {
+	if m.mongodb != nil {
+		if err := m.mongodb.Close(ctx); err != nil {
 			log.WithError(err).Error("Error closing MongoDB connection")
 			errs = append(errs, fmt.Errorf("MongoDB close error: %w", err))
 		} else {
 			log.WithField("database", "mongodb").Info("Database connection closed successfully")
 		}
-		m.mongo = nil
+		m.mongodb = nil
 	}
 
 	if m.redis != nil {
