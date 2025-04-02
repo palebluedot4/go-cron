@@ -13,7 +13,7 @@ import (
 )
 
 type Postgres struct {
-	db *gorm.DB
+	Gorm *gorm.DB
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Postgres, error) {
@@ -57,12 +57,12 @@ func New(ctx context.Context, cfg *config.Config) (*Postgres, error) {
 	}
 
 	return &Postgres{
-		db: db,
+		Gorm: db,
 	}, nil
 }
 
 func (p *Postgres) Close(ctx context.Context) error {
-	sqlDB, err := p.db.DB()
+	sqlDB, err := p.Gorm.DB()
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (p *Postgres) Close(ctx context.Context) error {
 }
 
 func (p *Postgres) IsConnected(ctx context.Context) bool {
-	sqlDB, err := p.db.DB()
+	sqlDB, err := p.Gorm.DB()
 	if err != nil {
 		return false
 	}

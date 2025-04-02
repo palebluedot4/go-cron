@@ -10,8 +10,8 @@ import (
 )
 
 type MongoDB struct {
-	client   *mongo.Client
-	database *mongo.Database
+	Client   *mongo.Client
+	Database *mongo.Database
 }
 
 func New(ctx context.Context, cfg *config.Config) (*MongoDB, error) {
@@ -26,15 +26,15 @@ func New(ctx context.Context, cfg *config.Config) (*MongoDB, error) {
 	}
 
 	return &MongoDB{
-		client:   client,
-		database: client.Database(cfg.Storage.MongoDB.Database),
+		Client:   client,
+		Database: client.Database(cfg.Storage.MongoDB.Database),
 	}, nil
 }
 
 func (m *MongoDB) Close(ctx context.Context) error {
-	return m.client.Disconnect(ctx)
+	return m.Client.Disconnect(ctx)
 }
 
 func (m *MongoDB) IsConnected(ctx context.Context) bool {
-	return m.client.Ping(ctx, nil) == nil
+	return m.Client.Ping(ctx, nil) == nil
 }

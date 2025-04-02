@@ -57,13 +57,13 @@ func (m *Manager) Init(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mg, err := m.Mongo(ctx)
+			mdb, err := m.Mongo(ctx)
 			if err != nil {
 				log.WithError(err).Warn("Failed to initialize MongoDB connection")
 				errCh <- fmt.Errorf("MongoDB connection failed: %w", err)
 			}
 
-			if mg != nil {
+			if mdb != nil {
 				log.WithField("database", "mongodb").Info("Database connection established successfully")
 			}
 		}()
@@ -73,13 +73,13 @@ func (m *Manager) Init(ctx context.Context) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			rd, err := m.Redis(ctx)
+			rdb, err := m.Redis(ctx)
 			if err != nil {
 				log.WithError(err).Warn("Failed to initialize Redis connection")
 				errCh <- fmt.Errorf("Redis connection failed: %w", err)
 			}
 
-			if rd != nil {
+			if rdb != nil {
 				log.WithField("database", "redis").Info("Database connection established successfully")
 			}
 		}()
@@ -138,13 +138,13 @@ func (m *Manager) Mongo(ctx context.Context) (*mongo.MongoDB, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	mg, err := mongo.New(ctx, m.cfg)
+	mdb, err := mongo.New(ctx, m.cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize mongo: %w", err)
 	}
 
-	m.mongo = mg
-	return mg, nil
+	m.mongo = mdb
+	return mdb, nil
 }
 
 func (m *Manager) Redis(ctx context.Context) (*redis.Redis, error) {
@@ -162,13 +162,13 @@ func (m *Manager) Redis(ctx context.Context) (*redis.Redis, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	rd, err := redis.New(ctx, m.cfg)
+	rdb, err := redis.New(ctx, m.cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize redis: %w", err)
 	}
 
-	m.redis = rd
-	return rd, nil
+	m.redis = rdb
+	return rdb, nil
 }
 
 func (m *Manager) Close(ctx context.Context) error {

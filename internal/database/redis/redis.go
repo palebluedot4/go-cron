@@ -10,7 +10,7 @@ import (
 )
 
 type Redis struct {
-	client *redis.Client
+	Client *redis.Client
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Redis, error) {
@@ -31,7 +31,7 @@ func New(ctx context.Context, cfg *config.Config) (*Redis, error) {
 	}
 
 	return &Redis{
-		client: client,
+		Client: client,
 	}, nil
 }
 
@@ -40,10 +40,10 @@ func (r *Redis) Close(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		return r.client.Close()
+		return r.Client.Close()
 	}
 }
 
 func (r *Redis) IsConnected(ctx context.Context) bool {
-	return r.client.Ping(ctx).Err() == nil
+	return r.Client.Ping(ctx).Err() == nil
 }
