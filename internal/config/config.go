@@ -32,9 +32,11 @@ type LogOutputConfig struct {
 }
 
 type StorageConfig struct {
-	Postgres PostgresConfig `mapstructure:"postgres"`
-	MongoDB  MongoDBConfig  `mapstructure:"mongodb"`
-	Redis    RedisConfig    `mapstructure:"redis"`
+	ConnectTimeout  time.Duration  `mapstructure:"connect_timeout"`
+	ShutdownTimeout time.Duration  `mapstructure:"shutdown_timeout"`
+	Postgres        PostgresConfig `mapstructure:"postgres"`
+	MongoDB         MongoDBConfig  `mapstructure:"mongodb"`
+	Redis           RedisConfig    `mapstructure:"redis"`
 }
 
 type PostgresConfig struct {
@@ -48,25 +50,28 @@ type PostgresConfig struct {
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime time.Duration `mapstructure:"conn_max_idle_time"`
 }
 
 type MongoDBConfig struct {
-	Enabled     bool          `mapstructure:"enabled"`
-	URI         string        `mapstructure:"uri"`
-	Database    string        `mapstructure:"database"`
-	MaxPoolSize int           `mapstructure:"max_pool_size"`
-	Timeout     time.Duration `mapstructure:"timeout"`
+	Enabled     bool   `mapstructure:"enabled"`
+	URI         string `mapstructure:"uri"`
+	Database    string `mapstructure:"database"`
+	MaxPoolSize uint64 `mapstructure:"max_pool_size"`
 }
 
 type RedisConfig struct {
-	Enabled      bool   `mapstructure:"enabled"`
-	Host         string `mapstructure:"host"`
-	Port         int    `mapstructure:"port"`
-	Password     string `mapstructure:"password"`
-	DB           int    `mapstructure:"db"`
-	MaxRetries   int    `mapstructure:"max_retries"`
-	PoolSize     int    `mapstructure:"pool_size"`
-	MinIdleConns int    `mapstructure:"min_idle_conns"`
+	Enabled      bool          `mapstructure:"enabled"`
+	Host         string        `mapstructure:"host"`
+	Port         int           `mapstructure:"port"`
+	Password     string        `mapstructure:"password"`
+	DB           int           `mapstructure:"db"`
+	DialTimeout  time.Duration `mapstructure:"dial_timeout"`
+	ReadTimeout  time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout time.Duration `mapstructure:"write_timeout"`
+	MaxRetries   int           `mapstructure:"max_retries"`
+	PoolSize     int           `mapstructure:"pool_size"`
+	MinIdleConns int           `mapstructure:"min_idle_conns"`
 }
 
 var (
