@@ -22,7 +22,6 @@ import (
 
 func main() {
 	rootCtx, rootCancel := context.WithCancel(context.Background())
-	defer rootCancel()
 
 	log := logger.Instance()
 	defer logger.Shutdown()
