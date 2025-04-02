@@ -83,7 +83,7 @@ func main() {
 	<-quit
 	rootCancel()
 
-	log.Warn("Shutting down the server")
+	log.Info("Shutting down the server")
 
 	serverShutdownCtx, serverShutdownCancel := context.WithTimeout(context.Background(), timeout.ServerShutdown(cfg))
 	defer serverShutdownCancel()
