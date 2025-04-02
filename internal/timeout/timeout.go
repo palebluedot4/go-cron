@@ -8,9 +8,16 @@ import (
 
 func ServerShutdown(cfg *config.Config) time.Duration {
 	if cfg.Server.ShutdownTimeout == 0 {
-		return 60 * time.Second
+		return 30 * time.Second
 	}
 	return cfg.Server.ShutdownTimeout
+}
+
+func AppShutdown(cfg *config.Config) time.Duration {
+	if cfg.Server.AppShutdownTimeout == 0 {
+		return 60 * time.Second
+	}
+	return cfg.Server.AppShutdownTimeout
 }
 
 func ServerRead(cfg *config.Config) time.Duration {
