@@ -5,7 +5,7 @@ server:
   log_output:
     console: true
     file: false
-  timeout: 30s
+  shutdown_timeout: 60s
 
 storage:
   postgres:

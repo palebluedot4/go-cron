@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 
 	"go-cron/internal/config"
 	"go-cron/internal/environment"
+	"go-cron/internal/timeout"
 	"go-cron/pkg/logger"
 	"go-cron/pkg/utils/timeutil"
 
@@ -19,6 +21,9 @@ import (
 )
 
 func main() {
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
 	log := logger.Instance()
 	defer logger.Shutdown()
 
@@ -49,11 +54,6 @@ func main() {
 		updateLogSettings(cfg, log)
 	})
 
-	go func() {
-		time.Sleep(10 * time.Second)
-		log.AdjustForProduction()
-	}()
-
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
 		Skipper: func(c echo.Context) bool {
 			return c.Path() == "/health"
@@ -69,6 +69,8 @@ func main() {
 	})
 
 	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
 		err := e.Start(":" + strconv.Itoa(cfg.Server.Port))
 		if err != nil && err != http.ErrServerClosed {
@@ -77,16 +79,20 @@ func main() {
 		}
 	}()
 
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	rootCancel()
 
 	log.Warn("Shutting down the server")
 
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout(cfg))
-	defer cancel()
+	serverShutdownCtx, serverShutdownCancel := context.WithTimeout(context.Background(), timeout.ServerShutdown(cfg))
+	defer serverShutdownCancel()
 
-	if err := e.Shutdown(ctx); err != nil {
-		log.WithError(err).Error("Failed to shutdown server")
+	if err := e.Shutdown(serverShutdownCtx); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.WithField("timeout", timeout.ServerShutdown(cfg)).Error("Server shutdown timed out")
+		} else {
+			log.WithError(err).Error("Failed to shutdown server")
+		}
 		os.Exit(1)
 	}
 
@@ -97,10 +103,6 @@ func updateLogSettings(cfg *config.Config, log *logger.Logger) {
 	if cfg.Server.LogLevel != "" {
 		logger.SetLogLevel(cfg.Server.LogLevel)
 	}
-
-	if environment.IsProduction(cfg.Server.Env) {
-		log.AdjustForProduction()
-	}
 }
 
 func updateServerSettings(cfg *config.Config, e *echo.Echo) {
@@ -109,11 +111,4 @@ func updateServerSettings(cfg *config.Config, e *echo.Echo) {
 	} else {
 		e.Debug = false
 	}
-}
-
-func shutdownTimeout(cfg *config.Config) time.Duration {
-	if cfg.Server.Timeout == 0 {
-		return 10 * time.Second
-	}
-	return cfg.Server.Timeout
 }
